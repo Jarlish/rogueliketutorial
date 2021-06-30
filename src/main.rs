@@ -105,11 +105,17 @@ impl State {
 
 //Main method
 fn main() -> rltk::BError {
+    //Set up the RLTK 80x50 windows
     use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
+    let mut context = RltkBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
+        .with_tile_dimensions(16, 16)
         .build()?;
-    let mut gs = State{ 
+    context.with_post_scanlines(true);
+    context.screen_burn_color(RGB::from_u8(170, 105, 50));
+
+    //Set the game state with a new ECS (World)
+    let mut gs = State { 
         ecs: World::new()
     };
     //Tell the ECS (World) about the components so it can store them
