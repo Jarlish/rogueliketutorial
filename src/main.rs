@@ -8,6 +8,8 @@ pub use map::*;
 mod player;
 use player::*;
 pub mod camera;
+mod rect;
+pub use rect::Rect;
 
 //Create game state
 pub struct State {
@@ -58,12 +60,14 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Player>();
 
     //Add a new randomly generated map to the ECS as a resource
-    gs.ecs.insert(Map::new(100, 100));
+    let map = Map::new_map_rooms_and_corridors(100, 100);
+    let (player_x, player_y) = map.rooms[0].center(); //Set the player's start position to the center of the first room in the map
+    gs.ecs.insert(map);
 
     //Create a player entity with Position and Renderable components and a Player tag component
     gs.ecs
         .create_entity()
-        .with(Position { x: 50, y: 50 })
+        .with(Position { x: player_x, y: player_y })
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::WHITE),
@@ -73,7 +77,7 @@ fn main() -> rltk::BError {
         .build();
 
     //Keep track of the player's position with a Point
-    gs.ecs.insert(Point::new(50, 50));
+    gs.ecs.insert(Point::new(player_x, player_y));
 
     //Start the RLTK main loop
     rltk::main_loop(context, gs)
