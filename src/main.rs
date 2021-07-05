@@ -1,4 +1,4 @@
-use rltk::{Rltk, GameState, RGB};
+use rltk::{Rltk, GameState, RGB, Point};
 use specs::prelude::*;
 
 mod components;
@@ -7,6 +7,7 @@ mod map;
 pub use map::*;
 mod player;
 use player::*;
+pub mod camera;
 
 //Create game state
 pub struct State {
@@ -32,16 +33,7 @@ impl GameState for State {
         self.run_systems();
 
         //Draw the map
-        let map = self.ecs.fetch::<Vec<TileType>>();
-        draw_map(&map, ctx);
-
-        //Draw entities with a Position and a Renderable component to the screen
-        let positions = self.ecs.read_storage::<Position>(); //Get read access to the ECS's Position component storage
-        let renderables = self.ecs.read_storage::<Renderable>(); //Get read access to the ECS's Renderable component storage
-
-        for (pos, render) in (&positions, &renderables).join() { //All entities with both a Position and a Renderable component
-            ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph); //Draw the entities render properties at its position
-        }
+        camera::render_camera(&self.ecs, ctx);
     }
 }
 
@@ -54,7 +46,6 @@ fn main() -> rltk::BError {
         .with_tile_dimensions(16, 16)
         .build()?;
     context.with_post_scanlines(true);
-    //context.screen_burn_color(RGB::from_u8(170, 105, 50));
     context.screen_burn_color(RGB::from_u8(0, 0, 0));
 
     //Set the game state with a new ECS (World)
@@ -67,12 +58,12 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Player>();
 
     //Add a new randomly generated map to the ECS as a resource
-    gs.ecs.insert(new_map());
+    gs.ecs.insert(Map::new(100, 100));
 
     //Create a player entity with Position and Renderable components and a Player tag component
     gs.ecs
         .create_entity()
-        .with(Position { x: 40, y: 25 })
+        .with(Position { x: 50, y: 50 })
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::WHITE),
@@ -80,6 +71,9 @@ fn main() -> rltk::BError {
         })
         .with(Player{})
         .build();
+
+    //Keep track of the player's position with a Point
+    gs.ecs.insert(Point::new(50, 50));
 
     //Start the RLTK main loop
     rltk::main_loop(context, gs)
