@@ -1,4 +1,4 @@
-use rltk::{Rltk, GameState, RGB, Point};
+use rltk::{Rltk, GameState, RGB, Point, RandomNumberGenerator};
 use specs::prelude::*;
 
 mod components;
@@ -62,12 +62,20 @@ impl State {
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
-            *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1, 100, 100);
+
+            //Create a new random number generator
+            let mut rng = RandomNumberGenerator::new();
+            if rng.range(0, 3) == 1 {
+                *worldmap_resource = Map::new_map_cellular_automata(current_depth + 1, 100, 100);
+            }else {
+                *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1, 100, 100);
+            }
+
             worldmap = worldmap_resource.clone();
         }
 
         //Place the player in the first room of the new map
-        let (player_x, player_y) = worldmap.rooms[0].center(); //Get the position of the center of the new map's first room
+        let (player_x, player_y) = (worldmap.starting_position_x, worldmap.starting_position_y); //Set the player's start position in the new map
         let mut player_position = self.ecs.write_resource::<Point>(); //Get the Point tracking the player's position
         *player_position = Point::new(player_x, player_y); //Update the Point tracking the player's position
         let mut position_components = self.ecs.write_storage::<Position>();
@@ -90,7 +98,7 @@ impl GameState for State {
             //Run systems
             self.run_systems();
             self.runstate = RunState::Paused;
-        } else if self.runstate == RunState::Paused {
+        }else if self.runstate == RunState::Paused {
             //Read user input from RLTK
             self.runstate = user_input(self, ctx);
         }else if self.runstate == RunState::NextLevel {
@@ -130,8 +138,8 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Player>();
 
     //Add a new randomly generated map to the ECS as a resource
-    let map = Map::new_map_rooms_and_corridors(1, 100, 100);
-    let (player_x, player_y) = map.rooms[0].center(); //Set the player's start position to the center of the first room in the map
+    let map = Map::new_map_cellular_automata(1, 100, 100);
+    let (player_x, player_y) = (map.starting_position_x, map.starting_position_y); //Set the player's start position in the new map
     gs.ecs.insert(map);
 
     //Create a player entity with Position and Renderable components and a Player tag component
