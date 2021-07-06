@@ -78,6 +78,10 @@ fn get_tile_glyph(idx: usize, map : &Map) -> (rltk::FontCharType, RGB, RGB) {
             glyph = rltk::to_cp437('#');
             fg = RGB::from_u8(160, 110, 20);
         }
+        TileType::DownStairs => {
+            glyph = rltk::to_cp437('>');
+            fg = RGB::from_u8(255, 255, 255);
+        }
     }
 
     (glyph, fg, bg)

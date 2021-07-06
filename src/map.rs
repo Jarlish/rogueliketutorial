@@ -4,7 +4,7 @@ use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
-    Wall, Floor
+    Wall, Floor, DownStairs
 }
 
 #[derive(Default, Clone)]
@@ -12,7 +12,8 @@ pub struct Map {
     pub tiles : Vec<TileType>,
     pub rooms : Vec<Rect>,
     pub width : i32,
-    pub height : i32
+    pub height : i32,
+    pub depth : i32
 }
 
 impl Map { 
@@ -22,7 +23,7 @@ impl Map {
     }
 
     //Function to create a new map with square rooms and corridors
-    pub fn new_map_rooms_and_corridors(width: i32, height: i32) -> Map {
+    pub fn new_map_rooms_and_corridors(new_depth : i32, width: i32, height: i32) -> Map {
         //Calculate the total number of tiles in the map based on its width and height
         let map_tile_count = (width * height) as usize;
 
@@ -31,7 +32,8 @@ impl Map {
             tiles : vec![TileType::Wall; map_tile_count],
             rooms : Vec::new(),
             width,
-            height
+            height,
+            depth: new_depth    
         };
     
         //Set the map's generation properties
@@ -77,6 +79,11 @@ impl Map {
             }
         }    
 
+        //Place the down stairs at the center of the last room
+        let stairs_position = map.rooms[map.rooms.len() - 1].center();
+        let stairs_idx = map.xy_idx(stairs_position.0, stairs_position.1);
+        map.tiles[stairs_idx] = TileType::DownStairs;
+    
         map
     }    
 

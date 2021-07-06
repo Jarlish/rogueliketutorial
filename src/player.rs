@@ -1,6 +1,6 @@
 use rltk::{VirtualKeyCode, Rltk, Point};
 use specs::prelude::*;
-use super::{Position, Player, TileType, Map, State};
+use super::{Position, Player, TileType, Map, State, RunState};
 use std::cmp::{min, max};
 
 //Function to move the player entity
@@ -23,11 +23,25 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     }
 }
 
+//Function to attempt interacting with an object on the map
+pub fn attempt_interact(ecs: &mut World) -> RunState {
+    let player_pos = ecs.fetch::<Point>(); //Get the Point tracking the player's position
+    let map = ecs.fetch::<Map>(); //Fetch the current map from the ECS
+    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
+    if map.tiles[player_idx] == TileType::DownStairs {
+        //If the player interacts with a down stairs, move to the next map level
+        RunState::NextLevel
+    } else {
+        //If there is no interactable object at the player's location, do nothing
+        RunState::Paused
+    }
+}
+
 //Function to read user input from RLTK
-pub fn user_input(gs: &mut State, ctx: &mut Rltk) {
+pub fn user_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
     //Player movement
     match ctx.key {
-        None => {} //Nothing happened
+        None => { return RunState::Paused } //Nothing happened
         Some(key) => match key {
             VirtualKeyCode::Left |
             VirtualKeyCode::A |
@@ -48,7 +62,12 @@ pub fn user_input(gs: &mut State, ctx: &mut Rltk) {
             VirtualKeyCode::S |
             VirtualKeyCode::Numpad2 |
             VirtualKeyCode::J => try_move_player(0, 1, &mut gs.ecs),
-            _ => {}
+
+            VirtualKeyCode::E => {
+                return attempt_interact(&mut gs.ecs);
+            }            
+            _ => { return RunState::Paused }
         },
     }
+    RunState::Running
 }
