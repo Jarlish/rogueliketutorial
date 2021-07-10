@@ -10,6 +10,8 @@ use player::*;
 pub mod camera;
 mod rect;
 pub use rect::Rect;
+mod visibility_system;
+use visibility_system::VisibilitySystem;
 
 //Create game state
 #[derive(PartialEq, Copy, Clone)]
@@ -23,6 +25,10 @@ pub struct State {
 impl State {
     //Function to run systems
     fn run_systems(&mut self) {
+        //Run the visibility system
+        let mut vis = VisibilitySystem{};
+        vis.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 
@@ -85,6 +91,13 @@ impl State {
             player_pos_comp.x = player_x;
             player_pos_comp.y = player_y;
         }
+
+        //Mark the player's viewshed as dirty so visibility is recalculated
+        let mut viewshed_components = self.ecs.write_storage::<Viewshed>(); //Get write access to the ECS's Viewshed component storage
+        let viewshed = viewshed_components.get_mut(*player_entity); //Get the Viewshed component associated with the player entity
+        if let Some(vs) = viewshed {
+            vs.dirty = true;
+        }        
     }
 }
 
@@ -103,6 +116,7 @@ impl GameState for State {
             self.runstate = user_input(self, ctx);
         }else if self.runstate == RunState::NextLevel {
             self.goto_next_level();
+            self.run_systems();
             self.runstate = RunState::Paused;
         }        
 
@@ -136,6 +150,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
+    gs.ecs.register::<Viewshed>();
 
     //Add a new randomly generated map to the ECS as a resource
     let map = Map::new_map_cellular_automata(1, 100, 100);
@@ -152,6 +167,7 @@ fn main() -> rltk::BError {
             bg: RGB::named(rltk::BLACK),
         })
         .with(Player{})
+        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
         .build();
     gs.ecs.insert(player_entity);
 

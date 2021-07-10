@@ -1,4 +1,4 @@
-  use rltk::{RandomNumberGenerator, BaseMap, Point };
+  use rltk::{RandomNumberGenerator, BaseMap, Algorithm2D, Point };
 use super::{Rect};
 use std::cmp::{max, min};
 
@@ -15,7 +15,16 @@ pub struct Map {
     pub height : i32,
     pub depth : i32,
     pub starting_position_x : i32,
-    pub starting_position_y : i32
+    pub starting_position_y : i32,
+    pub revealed_tiles : Vec<bool>,
+    pub visible_tiles : Vec<bool>
+}
+
+impl Algorithm2D for Map {
+    //Implements the Algorithm2D trait function to return the map's dimensions
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
+    }
 }
 
 impl BaseMap for Map {
@@ -82,7 +91,9 @@ impl Map {
             height,
             depth: new_depth,
             starting_position_x: 0,
-            starting_position_y: 0  
+            starting_position_y: 0,
+            revealed_tiles : vec![false; map_tile_count],
+            visible_tiles : vec![false; map_tile_count]    
         };
     
         //Set the map's generation properties
@@ -184,7 +195,9 @@ impl Map {
             height,
             depth: new_depth,
             starting_position_x: 0,
-            starting_position_y: 0
+            starting_position_y: 0,
+            revealed_tiles : vec![false; map_tile_count],
+            visible_tiles : vec![false; map_tile_count]
         };
     
         //Generate the map

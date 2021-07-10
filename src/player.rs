@@ -1,15 +1,16 @@
 use rltk::{VirtualKeyCode, Rltk, Point};
 use specs::prelude::*;
-use super::{Position, Player, TileType, Map, State, RunState};
+use super::{Position, Player, TileType, Map, State, RunState, Viewshed};
 use std::cmp::{min, max};
 
 //Function to move the player entity
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>(); //Get write access to the ECS's Position component storage
     let mut players = ecs.write_storage::<Player>(); //Get write access to the ECS's Player component storage
+    let mut viewsheds = ecs.write_storage::<Viewshed>(); //Get write access to the ECS's Viewshed component storage
     let map = ecs.fetch::<Map>(); //Fetch the map from the ECS
 
-    for (_player, pos) in (&mut players, &mut positions).join() { //All entities with both a Player component and a Position component
+    for (_player, pos, viewshed) in (&mut players, &mut positions, &mut viewsheds).join() { //All entities with both a Player component and a Position component
         let destination_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
         if map.tiles[destination_idx] != TileType::Wall {
             pos.x = min(map.width - 1 , max(0, pos.x + delta_x));
@@ -19,6 +20,9 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             let mut ppos = ecs.write_resource::<Point>();
             ppos.x = pos.x;
             ppos.y = pos.y;
+
+            //Tell the viewshed it needs to be updated
+            viewshed.dirty = true;
         }
     }
 }

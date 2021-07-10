@@ -3,7 +3,7 @@ use super::{Map, TileType, Position, Renderable};
 use rltk::{Point, Rltk, RGB};
 
 //Whether or not to draw the area outside of the map
-const SHOW_BOUNDARIES : bool = true;
+const SHOW_BOUNDARIES : bool = false;
 
 //Function to get the bounds of the camera
 pub fn get_screen_bounds(ecs: &World, ctx : &mut Rltk) -> (i32, i32, i32, i32) {
@@ -39,8 +39,10 @@ pub fn render_camera(ecs: &World, ctx : &mut Rltk) {
         for tx in min_x .. max_x {
             if tx >= 0 && tx <= map_width && ty >= 0 && ty <= map_height {
                 let idx = map.xy_idx(tx, ty);
-                let (glyph, fg, bg) = get_tile_glyph(idx, &*map);
-                ctx.set(x, y, fg, bg, glyph); //Draw the tile at its position
+                if map.revealed_tiles[idx] { //Only draw revealed tiles
+                    let (glyph, fg, bg) = get_tile_glyph(idx, &*map);
+                    ctx.set(x, y, fg, bg, glyph); //Draw the tile at its position
+                }
             } else if SHOW_BOUNDARIES {
                 ctx.set(x, y, RGB::named(rltk::GRAY), RGB::named(rltk::BLACK), rltk::to_cp437('·')); //Draw an indicator outside of the map bounds if it is enabled
             }
@@ -55,10 +57,13 @@ pub fn render_camera(ecs: &World, ctx : &mut Rltk) {
     let data = (&positions, &renderables).join().collect::<Vec<_>>(); //All entities with both a Position and a Renderable component
 
     for (pos, render) in data.iter() {
-        let entity_screen_x = pos.x - min_x;
-        let entity_screen_y = pos.y - min_y;
-        if entity_screen_x >= 0 && entity_screen_x <= map_width && entity_screen_y >= 0 && entity_screen_y <= map_height {
-            ctx.set(entity_screen_x, entity_screen_y, render.fg, render.bg, render.glyph); //Draw the entities render properties at its position
+        let idx = map.xy_idx(pos.x, pos.y);
+        if map.visible_tiles[idx] { //Only draw entities on visible tiles
+            let entity_screen_x = pos.x - min_x;
+            let entity_screen_y = pos.y - min_y;
+            if entity_screen_x >= 0 && entity_screen_x <= map_width && entity_screen_y >= 0 && entity_screen_y <= map_height {
+                ctx.set(entity_screen_x, entity_screen_y, render.fg, render.bg, render.glyph); //Draw the entities render properties at its position
+            }
         }
     }
 }
@@ -66,7 +71,7 @@ pub fn render_camera(ecs: &World, ctx : &mut Rltk) {
 //Function to get the render properties of a tile from its position
 fn get_tile_glyph(idx: usize, map : &Map) -> (rltk::FontCharType, RGB, RGB) {
     let glyph;
-    let fg;
+    let mut fg;
     let bg = RGB::from_u8(0, 0, 0);
 
     match map.tiles[idx] {
@@ -82,6 +87,9 @@ fn get_tile_glyph(idx: usize, map : &Map) -> (rltk::FontCharType, RGB, RGB) {
             glyph = rltk::to_cp437('>');
             fg = RGB::from_u8(255, 255, 255);
         }
+    }
+    if !map.visible_tiles[idx] { //Grey out revealed tiles that are not currently visible by the player
+        fg = fg.to_greyscale();
     }
 
     (glyph, fg, bg)
